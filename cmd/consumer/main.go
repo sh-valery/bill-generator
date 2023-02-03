@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	kafka "github.com/segmentio/kafka-go"
-	"strconv"
 	"time"
 )
 
@@ -15,35 +14,27 @@ const (
 
 func main() {
 	ctx := context.Background()
-	produce(ctx)
+	conusme(ctx)
 }
 
-func produce(ctx context.Context) {
-	// initialize a counter
-	i := 0
-
-	// intialize the writer with the broker addresses, and the topic
-	w := kafka.NewWriter(kafka.WriterConfig{
-		Brokers: []string{broker1Address},
-		Topic:   topic,
+func conusme(ctx context.Context) {
+	// initialize the reader with the broker addresses, the topic, and the partition
+	r := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:   []string{broker1Address},
+		Topic:     topic,
+		Partition: 0,
 	})
 
 	for {
-		// each kafka message has a key and value. The key is used
-		// to decide which partition (and consequently, which broker)
-		// the message gets published on
-		err := w.WriteMessages(ctx, kafka.Message{
-			Key: []byte(strconv.Itoa(i)),
-			// create an arbitrary message payload for the value
-			Value: []byte("this is message" + strconv.Itoa(i)),
-		})
+		// read a single message from the topic
+		m, err := r.ReadMessage(ctx)
 		if err != nil {
-			panic("could not write message " + err.Error())
+			panic("could not read message " + err.Error())
 		}
 
-		// log a confirmation once the message is written
-		fmt.Println("writes:", i)
-		i++
+		// log the message key and value
+		fmt.Printf("message at offset %d: %s = %s", m.Offset, string(m.Key), string(m.Value))
+
 		// sleep for a second
 		time.Sleep(time.Second)
 	}
